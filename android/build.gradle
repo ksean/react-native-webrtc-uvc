@@ -30,6 +30,6 @@ android {
 
 dependencies {
     implementation 'com.facebook.react:react-native:+'
-    implementation 'com.github.ksean.AndroidUSBCamera:libausbc:1.0.5.12'
+    implementation 'com.github.ksean.AndroidUSBCamera:libausbc:ec41083de23784d447accb0811540a8df51bf590'
     api 'org.jitsi:webrtc:118.+'
 }
