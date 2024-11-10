@@ -41,7 +41,7 @@ class GetUserMediaImpl {
 
     private static final int PERMISSION_REQUEST_CODE = (int) (Math.random() * Short.MAX_VALUE);
 
-    private final CameraEnumerator cameraEnumerator;
+    private CameraEnumerator cameraEnumerator;
     private final ReactApplicationContext reactContext;
 
     /**
@@ -59,29 +59,6 @@ class GetUserMediaImpl {
     GetUserMediaImpl(WebRTCModule webRTCModule, ReactApplicationContext reactContext) {
         this.webRTCModule = webRTCModule;
         this.reactContext = reactContext;
-
-        boolean camera2supported = false;
-
-        try {
-            camera2supported = Camera2Enumerator.isSupported(reactContext);
-        } catch (Throwable tr) {
-            // Some devices will crash here with: Fatal Exception: java.lang.AssertionError: Supported FPS ranges cannot
-            // be null. Make sure we don't.
-            Log.w(TAG, "Error checking for Camera2 API support.", tr);
-        }
-
-        if (camera2supported) {
-            if (reactContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
-                Log.d(TAG, "Creating video capturer using Camera2 API with UVC support.");
-                cameraEnumerator = new UVCCamera2Enumerator(reactContext);
-            } else {
-                Log.d(TAG, "Creating video capturer using Camera2 API.");
-                cameraEnumerator = new Camera2Enumerator(reactContext);
-            }
-        } else {
-            Log.d(TAG, "Creating video capturer using Camera1 API.");
-            cameraEnumerator = new Camera1Enumerator(false);
-        }
 
         reactContext.addActivityEventListener(new BaseActivityEventListener() {
             @Override
@@ -142,16 +119,35 @@ class GetUserMediaImpl {
         peerConstraints.mandatory.addAll(valid);
     }
 
+    private CameraEnumerator getCameraEnumerator() {
+        if (cameraEnumerator == null) {
+            if (Camera2Enumerator.isSupported(reactContext)) {
+                if (reactContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_USB_HOST)) {
+                    Log.i(TAG, "Creating uvc camera enumerator using the Camera2 API");
+                    cameraEnumerator = new UVCCamera2Enumerator(reactContext);
+                } else {
+                    Log.i(TAG, "Creating camera enumerator using the Camera2 API");
+                    cameraEnumerator = new Camera2Enumerator(reactContext);
+                }
+            } else {
+                Log.i(TAG, "Creating camera enumerator using the Camera1 API");
+                cameraEnumerator = new Camera1Enumerator(false);
+            }
+        }
+
+        return cameraEnumerator;
+    }
+
     ReadableArray enumerateDevices() {
         WritableArray array = Arguments.createArray();
-        String[] devices = cameraEnumerator.getDeviceNames();
+        String[] devices = getCameraEnumerator().getDeviceNames();
 
         for (int i = 0; i < devices.length; ++i) {
             String deviceName = devices[i];
             boolean isFrontFacing;
             try {
                 // This can throw an exception when using the Camera 1 API.
-                isFrontFacing = cameraEnumerator.isFrontFacing(deviceName);
+                isFrontFacing = getCameraEnumerator().isFrontFacing(deviceName);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to check the facing mode of camera");
                 continue;
@@ -202,7 +198,7 @@ class GetUserMediaImpl {
             Log.d(TAG, "getUserMedia(video): " + videoConstraintsMap);
 
             CameraCaptureController cameraCaptureController =
-                    new CameraCaptureController(cameraEnumerator, videoConstraintsMap);
+                    new CameraCaptureController(reactContext.getCurrentActivity(), getCameraEnumerator(), videoConstraintsMap);
 
             videoTrack = createVideoTrack(cameraCaptureController);
         }
@@ -243,11 +239,22 @@ class GetUserMediaImpl {
         }
     }
 
-    void switchCamera(String trackId) {
+    void applyConstraints(String trackId, ReadableMap constraints, Promise promise) {
         TrackPrivate track = tracks.get(trackId);
-        if (track != null && track.videoCaptureController instanceof CameraCaptureController) {
-            CameraCaptureController cameraCaptureController = (CameraCaptureController) track.videoCaptureController;
-            cameraCaptureController.switchCamera();
+        if (track != null && track.videoCaptureController instanceof AbstractVideoCaptureController) {
+            AbstractVideoCaptureController captureController = (AbstractVideoCaptureController) track.videoCaptureController;
+            captureController.applyConstraints(constraints, new Consumer<Exception>() {
+                public void accept(Exception e) {
+                    if(e != null) {
+                        promise.reject(e);
+                        return;
+                    }
+
+                    promise.resolve(captureController.getSettings());
+                }
+            });
+        } else {
+            promise.reject(new Exception("Camera track not found!"));
         }
     }
 
@@ -337,10 +344,13 @@ class GetUserMediaImpl {
             if (track instanceof VideoTrack) {
                 TrackPrivate tp = this.tracks.get(trackId);
                 AbstractVideoCaptureController vcc = tp.videoCaptureController;
+                trackInfo.putMap("settings", vcc.getSettings());
+            }
+
+            if (track instanceof AudioTrack) {
                 WritableMap settings = Arguments.createMap();
-                settings.putInt("height", vcc.getHeight());
-                settings.putInt("width", vcc.getWidth());
-                settings.putInt("frameRate", vcc.getFrameRate());
+                settings.putString("deviceId", "audio-1");
+                settings.putString("groupId", "");
                 trackInfo.putMap("settings", settings);
             }
 
