@@ -160,6 +160,15 @@ class GetUserMediaImpl {
             params.putString("label", deviceName);
             params.putString("kind", "videoinput");
             array.pushMap(params);
+
+            if (deviceName.startsWith("uvc-camera")) {
+                WritableMap audio = Arguments.createMap();
+                audio.putString("deviceId", "audio-uvc");
+                audio.putString("groupId", "");
+                audio.putString("label", deviceName);
+                audio.putString("kind", "audioinput");
+                array.pushMap(audio);
+            }
         }
 
         WritableMap audio = Arguments.createMap();
