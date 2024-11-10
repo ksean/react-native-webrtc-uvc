@@ -88,7 +88,11 @@ public class UVCVideoCapturer implements CameraVideoCapturer {
     }
 
     private CameraRequest createCameraRequest(int width, int height) {
-        return new CameraRequest.Builder().setPreviewWidth(width).setPreviewHeight(height).create();
+        return new CameraRequest.Builder()
+                .setPreviewWidth(width)
+                .setPreviewHeight(height)
+                .setAudioSource(CameraRequest.AudioSource.SOURCE_AUTO)
+                .create();
     }
 
     private static class PreviewDataCallback implements IPreviewDataCallBack {
