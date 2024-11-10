@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import androidx.core.util.Consumer;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.BaseActivityEventListener;
