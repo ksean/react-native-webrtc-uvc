@@ -91,7 +91,7 @@ public class UVCVideoCapturer implements CameraVideoCapturer {
         return new CameraRequest.Builder()
                 .setPreviewWidth(width)
                 .setPreviewHeight(height)
-                .setAudioSource(CameraRequest.AudioSource.SOURCE_AUTO)
+                .setAudioSource(CameraRequest.AudioSource.SOURCE_DEV_MIC)
                 .create();
     }
 
