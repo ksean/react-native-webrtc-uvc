@@ -160,6 +160,14 @@ class GetUserMediaImpl {
             params.putString("label", deviceName);
             params.putString("kind", "videoinput");
             array.pushMap(params);
+
+            if (getCameraEnumerator() instanceof UVCCamera2Enumerator) {
+                UVCCamera2Enumerator enumerator = (UVCCamera2Enumerator) getCameraEnumerator();
+
+                if (enumerator.isMicSupported()) {
+                    Log.i(TAG, "Mic is supported");
+                }
+            }
         }
 
         WritableMap audio = Arguments.createMap();

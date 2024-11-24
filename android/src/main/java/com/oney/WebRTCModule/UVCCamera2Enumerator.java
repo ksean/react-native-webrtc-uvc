@@ -108,4 +108,17 @@ public class UVCCamera2Enumerator extends Camera2Enumerator {
     public static boolean isUvcCamera(String deviceName) {
         return deviceName != null && deviceName.startsWith(UVC_PREFIX);
     }
+
+    public boolean isMicSupported() {
+        boolean isSupported = false;
+        try {
+            CameraUvcStrategy uvcStrategy = new CameraUvcStrategy(context);
+            isSupported = uvcStrategy.isMicSupported();
+            uvcStrategy.unRegister();
+        } catch (Exception e) {
+            Log.e(WebRTCModule.TAG, "Error checking if mic supported", e);
+        }
+
+        return isSupported;
+    }
 }
